@@ -5,6 +5,8 @@ class PythonExecutionService: ObservableObject {
     @Published var output = ""
     @Published var error = ""
     
+    private let baseURL = "http://127.0.0.1:8000"
+    
     func executePythonCode(_ code: String) async {
         await MainActor.run {
             isExecuting = true
@@ -12,48 +14,45 @@ class PythonExecutionService: ObservableObject {
             error = ""
         }
         
-        // For now, we'll simulate Python execution
-        // In a real implementation, you would integrate PythonKit or use a Python interpreter
-        await simulatePythonExecution(code)
-        
-        await MainActor.run {
-            isExecuting = false
-        }
-    }
-    
-    private func simulatePythonExecution(_ code: String) async {
-        // Simulate execution delay
-        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-        
-        await MainActor.run {
-            // Simple simulation of Python execution
-            if code.contains("print(") {
-                // Extract print statements and simulate output
-                let lines = code.components(separatedBy: .newlines)
-                var outputLines: [String] = []
-                
-                for line in lines {
-                    if line.contains("print(") {
-                        // Extract content from print statements
-                        if let start = line.range(of: "print(")?.upperBound,
-                           let end = line.range(of: ")")?.lowerBound {
-                            let content = String(line[start..<end])
-                            outputLines.append(content.replacingOccurrences(of: "'", with: "").replacingOccurrences(of: "\"", with: ""))
+        do {
+            let url = URL(string: "\(baseURL)/execute")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let requestBody = ["code": code]
+            let jsonData = try JSONSerialization.data(withJSONObject: requestBody)
+            request.httpBody = jsonData
+            
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            await MainActor.run {
+                if let httpResponse = response as? HTTPURLResponse {
+                    if httpResponse.statusCode == 200 {
+                        do {
+                            let result = try JSONDecoder().decode(CodeExecutionResult.self, from: data)
+                            if result.success {
+                                self.output = result.output
+                                self.error = result.error
+                            } else {
+                                self.output = ""
+                                self.error = result.error
+                            }
+                        } catch {
+                            self.error = "Failed to parse response: \(error.localizedDescription)"
                         }
+                    } else {
+                        self.error = "Server error: \(httpResponse.statusCode)"
                     }
+                } else {
+                    self.error = "Invalid response from server"
                 }
-                
-                if !outputLines.isEmpty {
-                    output = outputLines.joined(separator: "\n")
-                }
-            } else if code.contains("Hello") {
-                output = "Hello, World!\nWelcome to Python!"
-            } else if code.contains("fruits") {
-                output = "I like apple\nI like banana\nI like orange\n[0, 1, 4, 9, 16]"
-            } else if code.contains("greet") {
-                output = "Hello, Alice!\n5 + 3 = 8"
-            } else {
-                output = "Code executed successfully!"
+                self.isExecuting = false
+            }
+        } catch {
+            await MainActor.run {
+                self.error = "Network error: \(error.localizedDescription)"
+                self.isExecuting = false
             }
         }
     }
@@ -62,4 +61,11 @@ class PythonExecutionService: ObservableObject {
         output = ""
         error = ""
     }
+}
+
+// Response models for the API
+struct CodeExecutionResult: Codable {
+    let output: String
+    let error: String
+    let success: Bool
 } 

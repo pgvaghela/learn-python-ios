@@ -6,6 +6,9 @@ from typing import List, Optional
 import jwt
 from datetime import datetime, timedelta
 import os
+import subprocess
+import tempfile
+import json
 
 # Initialize FastAPI app
 app = FastAPI(title="LearnPython API", version="1.0.0")
@@ -60,6 +63,14 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+class CodeExecutionRequest(BaseModel):
+    code: str
+
+class CodeExecutionResponse(BaseModel):
+    output: str
+    error: str
+    success: bool
 
 # Mock database (in real app, this would be PostgreSQL)
 users_db = {}
@@ -116,6 +127,51 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         )
     return token_data
 
+def execute_python_code(code: str) -> CodeExecutionResponse:
+    """Execute Python code safely and return the result"""
+    try:
+        # Create a temporary file for the code
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(code)
+            temp_file = f.name
+        
+        # Execute the code with a timeout
+        result = subprocess.run(
+            ['python3', temp_file],
+            capture_output=True,
+            text=True,
+            timeout=10  # 10 second timeout
+        )
+        
+        # Clean up the temporary file
+        os.unlink(temp_file)
+        
+        if result.returncode == 0:
+            return CodeExecutionResponse(
+                output=result.stdout.strip(),
+                error="",
+                success=True
+            )
+        else:
+            return CodeExecutionResponse(
+                output="",
+                error=result.stderr.strip(),
+                success=False
+            )
+            
+    except subprocess.TimeoutExpired:
+        return CodeExecutionResponse(
+            output="",
+            error="Code execution timed out (max 10 seconds)",
+            success=False
+        )
+    except Exception as e:
+        return CodeExecutionResponse(
+            output="",
+            error=f"Execution error: {str(e)}",
+            success=False
+        )
+
 # API Routes
 @app.get("/")
 async def root():
@@ -169,6 +225,11 @@ async def get_user_progress(user_id: int, token_data: TokenData = Depends(verify
         if key.startswith(f"{user_id}_"):
             user_progress.append(value)
     return user_progress
+
+@app.post("/execute", response_model=CodeExecutionResponse)
+async def execute_code(request: CodeExecutionRequest):
+    """Execute Python code and return the result"""
+    return execute_python_code(request.code)
 
 if __name__ == "__main__":
     import uvicorn
