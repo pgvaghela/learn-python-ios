@@ -127,7 +127,7 @@ async def register(user: UserCreate):
         raise HTTPException(status_code=400, detail="Username already registered")
     
     # In real app, hash the password
-    user_dict = user.dict()
+    user_dict = user.model_dump()
     user_dict["id"] = len(users_db) + 1
     del user_dict["password"]
     users_db[user.username] = user_dict
@@ -159,7 +159,7 @@ async def get_lesson(lesson_id: int):
 @app.post("/progress")
 async def update_progress(progress: UserProgress, token_data: TokenData = Depends(verify_token)):
     progress_key = f"{progress.user_id}_{progress.lesson_id}"
-    progress_db[progress_key] = progress.dict()
+    progress_db[progress_key] = progress.model_dump()
     return {"message": "Progress updated successfully"}
 
 @app.get("/progress/{user_id}")
