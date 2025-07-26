@@ -68,7 +68,7 @@ struct LessonListView: View {
                 // Lessons List
                 List {
                     ForEach(viewModel.filteredLessons) { lesson in
-                        NavigationLink(destination: LessonDetailView(lesson: lesson)) {
+                        NavigationLink(destination: LessonDetailView(lesson: lesson, lessonsViewModel: viewModel)) {
                             LessonRowView(lesson: lesson, isCompleted: viewModel.isLessonCompleted(lesson))
                         }
                     }

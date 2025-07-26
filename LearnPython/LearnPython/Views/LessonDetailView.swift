@@ -3,19 +3,20 @@ import SwiftUI
 struct LessonDetailView: View {
     let lesson: Lesson
     @StateObject private var executionService = PythonExecutionService()
+    @ObservedObject var lessonsViewModel: LessonsViewModel
     @State private var currentCode: String
     @State private var showingOutput = false
-    @State private var isCompleted = false
     @State private var useSimpleEditor = false
     
-    init(lesson: Lesson) {
+    init(lesson: Lesson, lessonsViewModel: LessonsViewModel) {
         self.lesson = lesson
+        self.lessonsViewModel = lessonsViewModel
         self._currentCode = State(initialValue: lesson.codeExample)
     }
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            LazyVStack(alignment: .leading, spacing: 16) {
                 // Lesson Header
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -25,10 +26,16 @@ struct LessonDetailView: View {
                         
                         Spacer()
                         
-                        Button(isCompleted ? "Completed ✓" : "Mark Complete") {
-                            isCompleted.toggle()
+                        Button(lessonsViewModel.isLessonCompleted(lesson) ? "Completed ✓" : "Mark Complete") {
+                            if lessonsViewModel.isLessonCompleted(lesson) {
+                                // Remove from completed
+                                lessonsViewModel.completedLessons.remove(lesson.id)
+                            } else {
+                                // Add to completed
+                                lessonsViewModel.markLessonAsCompleted(lesson)
+                            }
                         }
-                        .foregroundColor(isCompleted ? .green : .blue)
+                        .foregroundColor(lessonsViewModel.isLessonCompleted(lesson) ? .green : .blue)
                         .fontWeight(.medium)
                     }
                     
@@ -97,12 +104,12 @@ struct LessonDetailView: View {
                         SimpleCodeEditorView(code: $currentCode) { newCode in
                             currentCode = newCode
                         }
-                        .frame(height: 200) // Reduced from 300
+                        .frame(height: 180) // Further reduced
                     } else {
                         CodeEditorView(code: $currentCode) { newCode in
                             currentCode = newCode
                         }
-                        .frame(height: 200) // Reduced from 300
+                        .frame(height: 180) // Further reduced
                         .background(Color(.systemGray6))
                         .cornerRadius(12)
                     }
@@ -202,6 +209,9 @@ struct LessonDetailView: View {
                 .padding()
                 .background(Color(.systemBackground))
                 .cornerRadius(12)
+                
+                // Add some bottom padding to ensure scrolling works
+                Spacer(minLength: 50)
             }
             .padding()
         }
@@ -224,6 +234,6 @@ struct LessonDetailView: View {
 
 #Preview {
     NavigationView {
-        LessonDetailView(lesson: Lesson.sampleLessons[0])
+        LessonDetailView(lesson: Lesson.sampleLessons[0], lessonsViewModel: LessonsViewModel())
     }
 } 
