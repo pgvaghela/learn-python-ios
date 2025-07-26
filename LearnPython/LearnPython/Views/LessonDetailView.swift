@@ -15,7 +15,7 @@ struct LessonDetailView: View {
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 16) {
                 // Lesson Header
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -73,7 +73,7 @@ struct LessonDetailView: View {
                 .cornerRadius(12)
                 
                 // Code Editor Section
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Text("Code Editor")
                             .font(.headline)
@@ -92,17 +92,17 @@ struct LessonDetailView: View {
                         .foregroundColor(.orange)
                     }
                     
-                    // Code Editor
+                    // Code Editor - Reduced height
                     if useSimpleEditor {
                         SimpleCodeEditorView(code: $currentCode) { newCode in
                             currentCode = newCode
                         }
-                        .frame(height: 300)
+                        .frame(height: 200) // Reduced from 300
                     } else {
                         CodeEditorView(code: $currentCode) { newCode in
                             currentCode = newCode
                         }
-                        .frame(height: 300)
+                        .frame(height: 200) // Reduced from 300
                         .background(Color(.systemGray6))
                         .cornerRadius(12)
                     }
@@ -139,6 +139,13 @@ struct LessonDetailView: View {
                         }
                         .foregroundColor(.red)
                         
+                        // Test button for debugging
+                        Button("Test Output") {
+                            executionService.output = "Test output: Hello, World!"
+                            executionService.error = ""
+                        }
+                        .foregroundColor(.orange)
+                        
                         Spacer()
                     }
                 }
@@ -146,8 +153,8 @@ struct LessonDetailView: View {
                 .background(Color(.systemBackground))
                 .cornerRadius(12)
                 
-                // Output Section - Always show
-                VStack(alignment: .leading, spacing: 12) {
+                // Output Section - More compact and always visible
+                VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("Output")
                             .font(.headline)
@@ -161,37 +168,36 @@ struct LessonDetailView: View {
                         }
                     }
                     
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 8) {
-                            if !executionService.output.isEmpty {
-                                Text(executionService.output)
-                                    .font(.system(.body, design: .monospaced))
-                                    .foregroundColor(.green)
-                                    .padding()
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(8)
-                            }
-                            
-                            if !executionService.error.isEmpty {
-                                Text(executionService.error)
-                                    .font(.system(.body, design: .monospaced))
-                                    .foregroundColor(.red)
-                                    .padding()
-                                    .background(Color.red.opacity(0.1))
-                                    .cornerRadius(8)
-                            }
-                            
-                            if executionService.output.isEmpty && executionService.error.isEmpty && !executionService.isExecuting {
-                                Text("No output yet. Click 'Run Code' to execute your Python code.")
-                                    .font(.system(.body, design: .monospaced))
-                                    .foregroundColor(.secondary)
-                                    .padding()
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(8)
-                            }
-                        }
+                    // Output content
+                    if !executionService.output.isEmpty {
+                        Text(executionService.output)
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundColor(.green)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
                     }
-                    .frame(maxHeight: 200)
+                    
+                    if !executionService.error.isEmpty {
+                        Text(executionService.error)
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundColor(.red)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(8)
+                    }
+                    
+                    if executionService.output.isEmpty && executionService.error.isEmpty && !executionService.isExecuting {
+                        Text("No output yet. Click 'Run Code' to execute your Python code.")
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
+                    }
                 }
                 .padding()
                 .background(Color(.systemBackground))
