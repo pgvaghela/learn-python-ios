@@ -111,8 +111,10 @@ struct LessonDetailView: View {
                     HStack {
                         Button(action: {
                             Task {
+                                print("Executing code: \(currentCode)")
                                 await executionService.executePythonCode(currentCode)
                                 showingOutput = true
+                                print("Execution completed. Output: \(executionService.output), Error: \(executionService.error)")
                             }
                         }) {
                             HStack {
@@ -144,40 +146,56 @@ struct LessonDetailView: View {
                 .background(Color(.systemBackground))
                 .cornerRadius(12)
                 
-                // Output Section
-                if showingOutput || !executionService.output.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
+                // Output Section - Always show
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
                         Text("Output")
                             .font(.headline)
                             .fontWeight(.semibold)
                         
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 8) {
-                                if !executionService.output.isEmpty {
-                                    Text(executionService.output)
-                                        .font(.system(.body, design: .monospaced))
-                                        .foregroundColor(.green)
-                                        .padding()
-                                        .background(Color(.systemGray6))
-                                        .cornerRadius(8)
-                                }
-                                
-                                if !executionService.error.isEmpty {
-                                    Text(executionService.error)
-                                        .font(.system(.body, design: .monospaced))
-                                        .foregroundColor(.red)
-                                        .padding()
-                                        .background(Color.red.opacity(0.1))
-                                        .cornerRadius(8)
-                                }
+                        Spacer()
+                        
+                        if executionService.isExecuting {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        }
+                    }
+                    
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if !executionService.output.isEmpty {
+                                Text(executionService.output)
+                                    .font(.system(.body, design: .monospaced))
+                                    .foregroundColor(.green)
+                                    .padding()
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(8)
+                            }
+                            
+                            if !executionService.error.isEmpty {
+                                Text(executionService.error)
+                                    .font(.system(.body, design: .monospaced))
+                                    .foregroundColor(.red)
+                                    .padding()
+                                    .background(Color.red.opacity(0.1))
+                                    .cornerRadius(8)
+                            }
+                            
+                            if executionService.output.isEmpty && executionService.error.isEmpty && !executionService.isExecuting {
+                                Text("No output yet. Click 'Run Code' to execute your Python code.")
+                                    .font(.system(.body, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .padding()
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(8)
                             }
                         }
-                        .frame(maxHeight: 200)
                     }
-                    .padding()
-                    .background(Color(.systemBackground))
-                    .cornerRadius(12)
+                    .frame(maxHeight: 200)
                 }
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(12)
             }
             .padding()
         }

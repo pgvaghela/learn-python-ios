@@ -1,6 +1,7 @@
 import SwiftUI
 import WebKit
 
+#if os(iOS)
 import UIKit
 
 struct CodeEditorView: UIViewRepresentable {

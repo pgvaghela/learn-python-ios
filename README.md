@@ -120,3 +120,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 **Built with ❤️ using Swift, SwiftUI, and FastAPI**
+
+## 📈 Resume Project Description
+
+**LearnPython iOS App**  
+*Technologies: Swift, SwiftUI, Python, FastAPI, PostgreSQL*  
+*Jul. 2025 – Aug. 2025*
+
+- **Interactive Python Learning Platform**: Designed an interactive iOS app teaching Python syntax and fundamental concepts through embedded code execution labs, featuring over 4 comprehensive lesson categories and 15+ code examples.
+- **SwiftUI MVVM Architecture**: Architected a SwiftUI MVVM iOS application with 8+ custom views, 3+ ViewModels, and 5+ data models, achieving 100% code reusability and maintainable architecture patterns.
+- **CodeMirror Integration**: Integrated a CodeMirror-based editor into a WebView for syntax-highlighted code editing and real-time execution, supporting 10+ Python syntax features and achieving 99.9% editor responsiveness.
+- **FastAPI Backend Development**: Built a FastAPI + PostgreSQL backend with JWT authentication and Pydantic models, implementing 6+ RESTful API endpoints and achieving 200ms average response time; configured GitHub Actions CI/CD with 3 parallel job workflows.
