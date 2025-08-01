@@ -16,7 +16,7 @@ struct LessonDetailView: View {
     
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16) {
+            LazyVStack(alignment: .leading, spacing: 20) {
                 // Lesson Header
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -104,12 +104,12 @@ struct LessonDetailView: View {
                         SimpleCodeEditorView(code: $currentCode) { newCode in
                             currentCode = newCode
                         }
-                        .frame(height: 180) // Further reduced
+                        .frame(height: 200)
                     } else {
                         CodeEditorView(code: $currentCode) { newCode in
                             currentCode = newCode
                         }
-                        .frame(height: 180) // Further reduced
+                        .frame(height: 200)
                         .background(Color(.systemGray6))
                         .cornerRadius(12)
                     }
@@ -145,13 +145,6 @@ struct LessonDetailView: View {
                             executionService.clearOutput()
                         }
                         .foregroundColor(.red)
-                        
-                        // Test button for debugging
-                        Button("Test Output") {
-                            executionService.output = "Test output: Hello, World!"
-                            executionService.error = ""
-                        }
-                        .foregroundColor(.orange)
                         
                         Spacer()
                     }
@@ -211,7 +204,7 @@ struct LessonDetailView: View {
                 .cornerRadius(12)
                 
                 // Add some bottom padding to ensure scrolling works
-                Spacer(minLength: 50)
+                Spacer(minLength: 100)
             }
             .padding()
         }

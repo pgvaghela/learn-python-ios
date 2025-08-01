@@ -6,77 +6,130 @@ struct LessonListView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Progress Header
-                VStack(spacing: 12) {
-                    HStack {
-                        Text("Your Progress")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        
-                        Spacer()
-                        
-                        Button("Reset") {
-                            viewModel.resetProgress()
-                        }
-                        .foregroundColor(.red)
-                    }
-                    
-                    ProgressView(value: viewModel.progressPercentage / 100)
-                        .progressViewStyle(LinearProgressViewStyle(tint: .blue))
-                    
-                    HStack {
-                        Text("\(viewModel.completedLessons.count) of \(viewModel.lessons.count) completed")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
-                        Text("\(Int(viewModel.progressPercentage))%")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.blue)
-                    }
-                }
-                .padding()
-                .background(Color(.systemBackground))
-                
-                // Filter Buttons
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        FilterButton(
-                            title: "All",
-                            isSelected: viewModel.currentFilter == nil && viewModel.currentCategory == nil
-                        ) {
-                            viewModel.currentFilter = nil
-                            viewModel.currentCategory = nil
-                        }
-                        
-                        ForEach(Lesson.LessonDifficulty.allCases, id: \.self) { difficulty in
-                            FilterButton(
-                                title: difficulty.rawValue,
-                                isSelected: viewModel.currentFilter == difficulty
-                            ) {
-                                viewModel.currentFilter = difficulty
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    // Progress Header
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("Your Progress")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            
+                            Spacer()
+                            
+                            Button("Reset") {
+                                viewModel.resetProgress()
                             }
+                            .foregroundColor(.red)
+                        }
+                        
+                        ProgressView(value: viewModel.progressPercentage / 100)
+                            .progressViewStyle(LinearProgressViewStyle(tint: .blue))
+                        
+                        HStack {
+                            Text("\(viewModel.completedLessons.count) of \(viewModel.lessons.count) completed")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Spacer()
+                            
+                            Text("\(Int(viewModel.progressPercentage))%")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    .padding()
+                    .background(Color(.systemBackground))
+                    
+                    // Filter Buttons
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            FilterButton(
+                                title: "All",
+                                isSelected: viewModel.currentFilter == nil && viewModel.currentCategory == nil
+                            ) {
+                                viewModel.currentFilter = nil
+                                viewModel.currentCategory = nil
+                            }
+                            
+                            ForEach(Lesson.LessonDifficulty.allCases, id: \.self) { difficulty in
+                                FilterButton(
+                                    title: difficulty.rawValue,
+                                    isSelected: viewModel.currentFilter == difficulty
+                                ) {
+                                    viewModel.currentFilter = difficulty
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                    .padding(.vertical, 8)
+                    
+                    // Loading State
+                    if viewModel.isLoading {
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .scaleEffect(1.2)
+                            Text("Loading lessons from server...")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                    }
+                    
+                    // Error State
+                    if let error = viewModel.error {
+                        VStack(spacing: 12) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.title2)
+                                .foregroundColor(.orange)
+                            Text("Using local lessons")
+                                .font(.headline)
+                            Text(error)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                            Button("Retry") {
+                                viewModel.refreshLessons()
+                            }
+                            .foregroundColor(.blue)
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        .padding(.horizontal)
+                    }
+                    
+                    // Lessons List - Now using LazyVStack instead of List
+                    LazyVStack(spacing: 8) {
+                        ForEach(viewModel.filteredLessons) { lesson in
+                            NavigationLink(destination: LessonDetailView(lesson: lesson, lessonsViewModel: viewModel)) {
+                                LessonRowView(lesson: lesson, isCompleted: viewModel.isLessonCompleted(lesson))
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 8)
+                                    .background(Color(.systemBackground))
+                                    .cornerRadius(12)
+                                    .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                     .padding(.horizontal)
+                    
+                    // Add bottom padding for better scrolling
+                    Spacer(minLength: 50)
                 }
-                .padding(.vertical, 8)
-                
-                // Lessons List
-                List {
-                    ForEach(viewModel.filteredLessons) { lesson in
-                        NavigationLink(destination: LessonDetailView(lesson: lesson, lessonsViewModel: viewModel)) {
-                            LessonRowView(lesson: lesson, isCompleted: viewModel.isLessonCompleted(lesson))
-                        }
-                    }
-                }
-                .listStyle(PlainListStyle())
             }
             .navigationTitle("Learn Python")
             .navigationBarTitleDisplayMode(.large)
+            .background(Color(.systemGroupedBackground))
+            .refreshable {
+                await Task {
+                    viewModel.refreshLessons()
+                }.value
+            }
         }
     }
 }

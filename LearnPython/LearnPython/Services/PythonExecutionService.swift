@@ -81,9 +81,73 @@ class PythonExecutionService: ObservableObject {
     }
 }
 
+// Lesson fetching service
+class LessonService: ObservableObject {
+    @Published var lessons: [Lesson] = []
+    @Published var isLoading = false
+    @Published var error: String?
+    
+    private let baseURL = "http://127.0.0.1:8000"
+    
+    func fetchLessons() async {
+        await MainActor.run {
+            isLoading = true
+            error = nil
+        }
+        
+        do {
+            let url = URL(string: "\(baseURL)/lessons")!
+            let (data, response) = try await URLSession.shared.data(from: url)
+            
+            await MainActor.run {
+                if let httpResponse = response as? HTTPURLResponse {
+                    if httpResponse.statusCode == 200 {
+                        do {
+                            let apiLessons = try JSONDecoder().decode([APILesson].self, from: data)
+                            // Convert API lessons to local lessons
+                            self.lessons = apiLessons.map { apiLesson in
+                                Lesson(
+                                    title: apiLesson.title,
+                                    description: apiLesson.description,
+                                    content: apiLesson.content,
+                                    codeExample: apiLesson.code_example,
+                                    difficulty: Lesson.LessonDifficulty(rawValue: apiLesson.difficulty.lowercased()) ?? .beginner,
+                                    category: Lesson.LessonCategory(rawValue: apiLesson.category.lowercased()) ?? .basics
+                                )
+                            }
+                        } catch {
+                            self.error = "Failed to parse lessons: \(error.localizedDescription)"
+                        }
+                    } else {
+                        self.error = "Server error: \(httpResponse.statusCode)"
+                    }
+                } else {
+                    self.error = "Invalid response from server"
+                }
+                self.isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                self.error = "Network error: \(error.localizedDescription)"
+                self.isLoading = false
+            }
+        }
+    }
+}
+
 // Response models for the API
 struct CodeExecutionResult: Codable {
     let output: String
     let error: String
     let success: Bool
+}
+
+struct APILesson: Codable {
+    let id: Int
+    let title: String
+    let description: String
+    let content: String
+    let code_example: String
+    let difficulty: String
+    let category: String
 } 

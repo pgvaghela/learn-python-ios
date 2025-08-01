@@ -8,6 +8,10 @@ class LessonsViewModel: ObservableObject {
     @Published var completedLessons: Set<UUID> = []
     @Published var currentFilter: Lesson.LessonDifficulty?
     @Published var currentCategory: Lesson.LessonCategory?
+    @Published var isLoading = false
+    @Published var error: String?
+    
+    private let lessonService = LessonService()
     
     init() {
         loadLessons()
@@ -15,7 +19,33 @@ class LessonsViewModel: ObservableObject {
     }
     
     private func loadLessons() {
-        lessons = Lesson.sampleLessons
+        // First try to load from backend API
+        Task {
+            await fetchLessonsFromAPI()
+        }
+        
+        // Fallback to local lessons if API fails
+        if lessons.isEmpty {
+            lessons = Lesson.sampleLessons
+        }
+    }
+    
+    private func fetchLessonsFromAPI() async {
+        isLoading = true
+        error = nil
+        
+        await lessonService.fetchLessons()
+        
+        if !lessonService.lessons.isEmpty {
+            lessons = lessonService.lessons
+            print("✅ Loaded \(lessons.count) lessons from API")
+        } else if lessonService.error != nil {
+            print("⚠️ API error: \(lessonService.error ?? "Unknown error")")
+            print("📱 Falling back to local lessons")
+            lessons = Lesson.sampleLessons
+        }
+        
+        isLoading = false
     }
     
     private func loadProgress() {
@@ -58,5 +88,11 @@ class LessonsViewModel: ObservableObject {
     func resetProgress() {
         completedLessons.removeAll()
         saveProgress()
+    }
+    
+    func refreshLessons() {
+        Task {
+            await fetchLessonsFromAPI()
+        }
     }
 } 
