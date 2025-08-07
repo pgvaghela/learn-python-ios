@@ -5,7 +5,7 @@ class PythonExecutionService: ObservableObject {
     @Published var output = ""
     @Published var error = ""
     
-    private let baseURL = "http://127.0.0.1:8000"
+    private let baseURL = "http://192.168.0.250:8000"
     
     func executePythonCode(_ code: String) async {
         print("🔵 Starting Python code execution...")
@@ -87,9 +87,29 @@ class LessonService: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
     
-    private let baseURL = "http://127.0.0.1:8000"
+    private let baseURL = "http://192.168.0.250:8000"
+    
+    func testConnection() async -> Bool {
+        print("🧪 LessonService: Testing connection to \(baseURL)")
+        do {
+            let url = URL(string: "\(baseURL)/")!
+            let (_, response) = try await URLSession.shared.data(from: url)
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                print("🧪 LessonService: Connection test - Status: \(httpResponse.statusCode)")
+                return httpResponse.statusCode == 200
+            }
+            return false
+        } catch {
+            print("🧪 LessonService: Connection test failed - \(error)")
+            return false
+        }
+    }
     
     func fetchLessons() async {
+        print("🔵 LessonService: Starting to fetch lessons...")
+        print("🔵 LessonService: Base URL: \(baseURL)")
+        
         await MainActor.run {
             isLoading = true
             error = nil
@@ -97,36 +117,56 @@ class LessonService: ObservableObject {
         
         do {
             let url = URL(string: "\(baseURL)/lessons")!
+            print("🔵 LessonService: Making request to: \(url)")
+            
             let (data, response) = try await URLSession.shared.data(from: url)
+            
+            print("🔵 LessonService: Received response: \(response)")
+            print("🔵 LessonService: Data size: \(data.count) bytes")
             
             await MainActor.run {
                 if let httpResponse = response as? HTTPURLResponse {
+                    print("🔵 LessonService: HTTP Status Code: \(httpResponse.statusCode)")
                     if httpResponse.statusCode == 200 {
                         do {
                             let apiLessons = try JSONDecoder().decode([APILesson].self, from: data)
+                            print("🔵 LessonService: Successfully decoded \(apiLessons.count) lessons from API")
+                            
                             // Convert API lessons to local lessons
                             self.lessons = apiLessons.map { apiLesson in
-                                Lesson(
+                                // Fix difficulty conversion - capitalize the first letter
+                                let difficultyString = apiLesson.difficulty.prefix(1).uppercased() + apiLesson.difficulty.dropFirst().lowercased()
+                                let difficulty = Lesson.LessonDifficulty(rawValue: difficultyString) ?? .beginner
+                                let category = Lesson.LessonCategory(rawValue: apiLesson.category.lowercased()) ?? .basics
+                                
+                                print("🔵 LessonService: Converting lesson '\(apiLesson.title)' - difficulty: '\(apiLesson.difficulty)' -> '\(difficultyString)' -> \(difficulty)")
+                                
+                                return Lesson(
                                     title: apiLesson.title,
                                     description: apiLesson.description,
                                     content: apiLesson.content,
                                     codeExample: apiLesson.code_example,
-                                    difficulty: Lesson.LessonDifficulty(rawValue: apiLesson.difficulty.lowercased()) ?? .beginner,
-                                    category: Lesson.LessonCategory(rawValue: apiLesson.category.lowercased()) ?? .basics
+                                    difficulty: difficulty,
+                                    category: category
                                 )
                             }
+                            print("🔵 LessonService: Successfully converted \(self.lessons.count) lessons")
                         } catch {
+                            print("🔵 LessonService: Failed to parse lessons: \(error)")
                             self.error = "Failed to parse lessons: \(error.localizedDescription)"
                         }
                     } else {
+                        print("🔵 LessonService: Server error: \(httpResponse.statusCode)")
                         self.error = "Server error: \(httpResponse.statusCode)"
                     }
                 } else {
+                    print("🔵 LessonService: Invalid response from server")
                     self.error = "Invalid response from server"
                 }
                 self.isLoading = false
             }
         } catch {
+            print("🔵 LessonService: Network error: \(error)")
             await MainActor.run {
                 self.error = "Network error: \(error.localizedDescription)"
                 self.isLoading = false

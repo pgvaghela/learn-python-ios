@@ -19,29 +19,54 @@ class LessonsViewModel: ObservableObject {
     }
     
     private func loadLessons() {
-        // First try to load from backend API
+        // Force API loading - don't use hardcoded lessons
         Task {
             await fetchLessonsFromAPI()
-        }
-        
-        // Fallback to local lessons if API fails
-        if lessons.isEmpty {
-            lessons = Lesson.sampleLessons
         }
     }
     
     private func fetchLessonsFromAPI() async {
+        print("🔵 LessonsViewModel: Starting to fetch lessons from API...")
         isLoading = true
         error = nil
         
+        // Test connection first
+        let connectionTest = await lessonService.testConnection()
+        print("🔵 LessonsViewModel: Connection test result: \(connectionTest)")
+        
+        if !connectionTest {
+            print("❌ LessonsViewModel: Cannot connect to backend - using hardcoded lessons")
+            lessons = Lesson.sampleLessons
+            isLoading = false
+            return
+        }
+        
         await lessonService.fetchLessons()
+        
+        print("🔵 LessonsViewModel: LessonService returned \(lessonService.lessons.count) lessons")
+        print("🔵 LessonsViewModel: LessonService error: \(lessonService.error ?? "none")")
         
         if !lessonService.lessons.isEmpty {
             lessons = lessonService.lessons
-            print("✅ Loaded \(lessons.count) lessons from API")
+            print("✅ LessonsViewModel: Loaded \(lessons.count) lessons from API")
+            
+            // Debug: Print difficulty levels of first few lessons
+            for (index, lesson) in lessons.prefix(5).enumerated() {
+                print("🔵 LessonsViewModel: Lesson \(index + 1): '\(lesson.title)' - Difficulty: \(lesson.difficulty)")
+            }
+            
+            // Debug: Count lessons by difficulty
+            let difficultyCounts = Dictionary(grouping: lessons, by: { $0.difficulty })
+                .mapValues { $0.count }
+            print("🔵 LessonsViewModel: Difficulty breakdown: \(difficultyCounts)")
+            
         } else if lessonService.error != nil {
-            print("⚠️ API error: \(lessonService.error ?? "Unknown error")")
-            print("📱 Falling back to local lessons")
+            print("⚠️ LessonsViewModel: API error: \(lessonService.error ?? "Unknown error")")
+            print("📱 LessonsViewModel: Falling back to local lessons")
+            lessons = Lesson.sampleLessons
+        } else {
+            print("⚠️ LessonsViewModel: No lessons returned from API and no error")
+            print("📱 LessonsViewModel: Falling back to local lessons")
             lessons = Lesson.sampleLessons
         }
         
@@ -91,6 +116,22 @@ class LessonsViewModel: ObservableObject {
     }
     
     func refreshLessons() {
+        print("🔄 LessonsViewModel: Manual refresh requested")
+        Task {
+            await fetchLessonsFromAPI()
+        }
+    }
+    
+    func testAPIConnection() {
+        print("🧪 LessonsViewModel: Testing API connection...")
+        Task {
+            await fetchLessonsFromAPI()
+        }
+    }
+    
+    func forceRefreshFromAPI() {
+        print("🔄 LessonsViewModel: Force refresh from API requested")
+        lessons = [] // Clear current lessons
         Task {
             await fetchLessonsFromAPI()
         }
